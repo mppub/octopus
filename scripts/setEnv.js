@@ -22,10 +22,13 @@ try{
 	octopus.handleError("env file not found or contains an invalid JSON!");
 }
 
-let fileArgDevel = fileArg + ".devel";
+let fileArgDevel = "./env.json.devel";
 let fs = require("fs");
 if(fs.existsSync(fileArgDevel)){
 	envJson["DEV"]= true;
+	console.log("Running in DEVELOPMENT mode");
+} else {
+	console.log("Running in STABLE (FREEZED) mode");
 };
 
 const {spawn} = require("child_process");
