@@ -18,4 +18,8 @@ let envJson;
 
 let fileArgDevel = fileArg + ".devel";
 let fs = require("fs");
-fs.writeSync(fileArgDevel, Buffer.from("This file indicates that octopus is using octopus.json and not octopus-dev.json file to install dependencies"));
+fs.writeFile(fileArgDevel, "This file indicates that octopus is using octopus.json and not octopus-dev.json file to install dependencies", function(err){
+if(err){
+	console.error(err);
+   }
+});
