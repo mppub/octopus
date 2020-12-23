@@ -18,13 +18,10 @@ const path = require("path");
 const fs = require("fs");
 const child_process = require('child_process');
 
-// Save current config file
-currentConfigFile = octopus.getConfigFile();
-
 // Ensure that we are switched to DEV configuration
-octopus.changeConfigFile('./octopus-dev.json');
+//Switch to stable octopus
+octopus.setConfigFileToMode(true);
 
-let config =  octopus.readConfig();
 let notFoundFolders = [];
 
 /**Performs a freeze on current configuration loaded from file (octopus.json or octopus-dev.json) */
@@ -82,7 +79,7 @@ function freezeConfig(config){
     });
 }
 
-//Update config
+let config =  octopus.readConfig();
 freezeConfig(config);
 
 if(notFoundFolders.length > 0){
@@ -92,7 +89,7 @@ if(notFoundFolders.length > 0){
 }
 
 //Switch to stable octopus
-octopus.changeConfigFile('./octopus.json');
+octopus.setConfigFileToMode(false);
 
 //Save it
 octopus.updateConfig(config, (err) => {
@@ -100,9 +97,6 @@ octopus.updateConfig(config, (err) => {
         throw err;
     }
 
-    console.log("Configuration file  " + octopus.getConfigFile() +  " updated.")
-
-    //Change back to original config file
-    octopus.changeConfigFile(currentConfigFile);
+    console.log("Configuration file  " + octopus.getConfigFile() +  " updated.");
 });
 
