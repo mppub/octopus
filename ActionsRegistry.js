@@ -811,7 +811,10 @@ function ActionsRegistry() {
 					callback(err);
 				}
 			}
-		}
+        } else {
+            console.log("Skipping command because was not meant for your curent OS.")
+        }
+
 	/*	let err;
 		if (child.status !== 0) {
 			err = new Error(`Command finished with exit code ${child.status}. Hint: inspect command configuration, environment variables etc. and try again.`);
@@ -839,6 +842,8 @@ function ActionsRegistry() {
 
 			});
 		} else {
+            console.log("Skipping command because was not meant for your curent OS.")
+
 			if (callback) {
 				callback();
 			}
