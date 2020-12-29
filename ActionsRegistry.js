@@ -812,7 +812,7 @@ function ActionsRegistry() {
 				}
 			}
         } else {
-            console.log("Skipping command because was not meant for your curent OS.")
+            console.log("Skipping command [" + action.cmd +  "] because was not meant for your curent OS.")
         }
 
 	/*	let err;
@@ -842,7 +842,7 @@ function ActionsRegistry() {
 
 			});
 		} else {
-            console.log("Skipping command because was not meant for your curent OS.")
+            console.log("Skipping command [" + action.cmd +  "] because was not meant for your curent OS.")
 
 			if (callback) {
 				callback();
