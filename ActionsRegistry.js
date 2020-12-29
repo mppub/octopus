@@ -790,22 +790,26 @@ function ActionsRegistry() {
 		if (!action.cmd) {
 			throw "No command given";
 		}
-		let child;
-		try {
-			console.log("Running command:", action.cmd);
-			if (typeof action.options !== "undefined") {
-				console.log("with opts:", action.options);
-			}
-			//child_process.execSync(action.cmd, action.options);
-			const options = {
-				stdio: "inherit",
-				shell: true
-			};
-			Object.assign(options, action.options);
-			child = child_process.spawnSync(action.cmd, action.args, options);
-		} catch (err) {
-			if (callback) {
-				callback(err);
+		
+		if (!action.os || (action.os && action.os == os.platform()) ){
+				
+			let child;
+			try {
+				console.log("Running command:", action.cmd);
+				if (typeof action.options !== "undefined") {
+					console.log("with opts:", action.options);
+				}
+				//child_process.execSync(action.cmd, action.options);
+				const options = {
+					stdio: "inherit",
+					shell: true
+				};
+				Object.assign(options, action.options);
+				child = child_process.spawnSync(action.cmd, action.args, options);
+			} catch (err) {
+				if (callback) {
+					callback(err);
+				}
 			}
 		}
 	/*	let err;
@@ -824,15 +828,22 @@ function ActionsRegistry() {
             throw "No command given";
         }
         console.log("Running command:", action.cmd, "with opts:", action.options);
-        child_process.exec(action.cmd, action.options, function(err, stdout, stderr){
-            if(err){
-                return callback(err);
-            }
-            console.log(stdout);
-            console.log(stderr);
-            callback(undefined, `Execute command finished.`);
+		if (!action.os || (action.os && action.os == os.platform()) ){
+			child_process.exec(action.cmd, action.options, function(err, stdout, stderr){
+				if(err){
+					return callback(err);
+				}
+				console.log(stdout);
+				console.log(stderr);
+				callback(undefined, `Execute command finished.`);
 
-        });
+			});
+		} else {
+			if (callback) {
+				callback();
+			}
+		}
+		
     };
 
     this.registerActionHandler = function (name, handler, overwrite) {
