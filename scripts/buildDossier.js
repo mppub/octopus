@@ -24,8 +24,15 @@ fs.access(conf_file, fs.F_OK, err => {
             return;
         }
         const path = require("path");
-        
-        let conf = JSON.parse(data.toString());
+        let conf;
+
+        try {
+            conf = JSON.parse(data.toString());
+        } catch (e) {
+            console.error("Could not parse configuration file. Is it a proper JSON?");
+            return;
+        }
+
         let bundles_path = conf.bundles_path || DEFAULT_PSK_BUNDLES_PATH;
         
         require(path.join(bundles_path, "openDSU.js"));
