@@ -15,12 +15,12 @@ const fs = require("fs");
 
 fs.access(conf_file, fs.F_OK, err => {
     if (err){
-        console.error("Configuration file not found", err);
+        octopus.handleError("Configuration file not found", err);
         return;
     }
     fs.readFile(conf_file, (err, data) => {
         if (err){
-            console.error("Could not read configuration file");
+            octopus.handleError("Could not read configuration file");
             return;
         }
         const path = require("path");
@@ -29,7 +29,7 @@ fs.access(conf_file, fs.F_OK, err => {
         try {
             conf = JSON.parse(data.toString());
         } catch (e) {
-            console.error("Could not parse configuration file. Is it a proper JSON?");
+            octopus.handleError("Could not parse configuration file. Is it a proper JSON?");
             return;
         }
 
