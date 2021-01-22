@@ -33,14 +33,22 @@ fs.access(conf_file, fs.F_OK, err => {
             return;
         }
 
-        let bundles_path = conf.bundles_path || DEFAULT_PSK_BUNDLES_PATH;
-        
-        require(path.join(bundles_path, "openDSU.js"));
+        let openDSU_bundle = path.join(conf.bundles_path || DEFAULT_PSK_BUNDLES_PATH, "openDSU.js");
+        let working_folder = process.cwd();
+        let openDSU_bundle_full = path.join(working_folder, openDSU_bundle);    // if I don't do this, the require fails even though the path is correct! Why?
+
+        try
+        {
+            require(openDSU_bundle_full);
+        } catch (e){
+            octopus.handleError("Could not find the bundle at: " + openDSU_bundle + "\n" + e);
+        }
+
         let dossier_builder = require('opendsu').loadApi('dt').getDossierBuilder();
-        
+
         dossier_builder.build(conf, (err, result) => {
-            let projectName = path.basename(path.join(__dirname, "../"));
-            
+            let projectName = path.basename(working_folder);
+
             if (err) {
                 console.log(`Build process of <${projectName}> failed.`);
                 console.log(err);
@@ -52,5 +60,3 @@ fs.access(conf_file, fs.F_OK, err => {
     });
 
 });
-
-
