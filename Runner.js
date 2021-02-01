@@ -1,4 +1,3 @@
-const fs = require("fs");
 const actionsRegistry = require("./ActionsRegistry");
 const path = require("path");
 let TAG = "[Octopus]";
@@ -126,27 +125,6 @@ function Runner() {
         }
     }
 
-	/**
-	 *__setDefaultActions
-	 *    Set default actions for deps that don't have
-	 *
-	 * @param {Object}dep
-	 * @returns
-	 *@private __setDefaultActions
-	 */
-	function __setDefaultActions(dep){
-		const defaultActions = [
-            {
-                "type": "smartClone",
-                "target": "modules"
-            }];
-
-		if(!dep.actions){
-			dep.actions = defaultActions;
-		}else{
-			dep.actions.concat(defaultActions);
-		}
-	}
 
 	function __basicConfigTest(configFileOrObject){
 		if (!configFileOrObject) {
@@ -193,9 +171,7 @@ function Runner() {
         for (let i = 0, len = tasks.length; i < len; i++) {
             let dep = tasks[i];
             if (!dep.actions || !Array.isArray(dep.actions) || dep.actions.length === 0) {
-                //throw `No actions available for ${dep.name} dependency or wrong format.`;
-				console.log(`No actions available for ${dep.name} dependency. Setting a default action...`);
-				__setDefaultActions(dep);
+				require("./lib/utils/ConfigurationDefaults").setDefaultActions(dep);
             }
         }
         return config;

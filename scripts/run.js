@@ -1,3 +1,9 @@
+/**Called by npm (using the package.json configuration) from
+ *  "postinstall" hook - default (no parameters)
+ * 	"build-all" hook (parameter: build)
+ *  "server" hook (param start)
+ *	etc,
+ * */
 const octopus = require("./index");
 const args = process.argv;
 args.splice(0, 2);

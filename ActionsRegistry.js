@@ -8,12 +8,9 @@ const https = require('https');
 
 const fsExt = require('./lib/utils/FSExtension').fsExt;
 
-const accessSync = fs.accessSync;
-const constants = fs.constants || fs;
 const changeSet = "latest-change-set.txt";
 const mergeChangeSet = "Merge";
 const changeSetDefaultSize = 3;
-
 
 /**
  * Contains default actions
@@ -225,7 +222,7 @@ function ActionsRegistry() {
             "depth": "1",
             "branch": "master"
         };
-        if (action && typeof action.options === "object") {
+        if (typeof action.options === "object") {
             options = action.options;
         }
 
@@ -271,18 +268,56 @@ function ActionsRegistry() {
                     }
 
                     try {
-                        child_process.execSync("git stash", basicProcOptions);
-                        let pullResult = child_process.execSync("git pull", basicProcOptions);
-                        pullResult = pullResult.toString();
-                        if (pullResult.indexOf("Already up-to-date") === -1) {
+                        //A. Stash it
+                        try {
+                            child_process.execSync("git stash", basicProcOptions);
+                        } catch (err) {
+                            console.log(err);
+                        }
+
+                        //B. Pull
+                        if(typeof action.commit !== "undefined"){ //We have a commit no
+                            /**
+                             * The pull is nothing that a fetch + checkout
+                            */
+
+                            //1 - Fetch
+                            let remote = dependency.src;
+                            let commitNo = action.commit;
+                            //let repoName = dependency.name;
+
+                            let cmdFetch = 'git fetch ' + remote + ' --depth=1 '+ commitNo;                            
                             try {
-                                //console.log("pullResult", pullResult.indexOf("Already up-to-date"));
-                                let log = child_process.execSync("git log --max-count=1", basicProcOptions).toString().split("\n").slice(4).join("\n");
-                                fs.appendFileSync(changeSet, log);
+                                let fetchResultLog = child_process.execSync(cmdFetch, {cwd: path.resolve(target)} /*basicProcOptions*/).toString();                                
+                                console.log("Result of fetching of version", changeSet, fetchResultLog);
+                            } catch (err) {
+                                console.log(err);
+                            }
+
+                            //2 - Checkout
+                            let cmdCheckout = 'git checkout ' + commitNo;                            
+                            try {
+                                let checkoutResultLog = child_process.execSync(cmdCheckout, {cwd: path.resolve(target)} /*, basicProcOptions*/).toString();                                
+                                console.log("Result of checkout of version", changeSet, checkoutResultLog);
                             } catch (err) {
                                 console.log(err);
                             }
                         }
+                        else{ //no commit no => classic pull
+                            let pullResult = child_process.execSync("git pull", basicProcOptions);
+                            pullResult = pullResult.toString();
+                            if (pullResult.indexOf("Already up-to-date") === -1) {
+                                try {
+                                    //console.log("pullResult", pullResult.indexOf("Already up-to-date"));
+                                    let log = child_process.execSync("git log --max-count=1", basicProcOptions).toString().split("\n").slice(4).join("\n");
+                                    fs.appendFileSync(changeSet, log);
+                                } catch (err) {
+                                    console.log(err);
+                                }
+                            }
+                        }
+
+                        //C. Apply stash
                         let finalResult = child_process.execSync("git stash apply", basicProcOptions);
                         if (finalResult.indexOf("Unmerged") !== -1) {
                             callback(new Error(`Repo ${target} needs attention! (Merging issues)`), `Finished update action on dependency ${dependency.name}`)
@@ -306,7 +341,7 @@ function ActionsRegistry() {
                 "depth": "1",
                 "branch": "master"
             };
-            if (action && typeof action.options === "object") {
+            if (typeof action.options === "object") {
                 options = action.options;
             }
 
@@ -316,11 +351,28 @@ function ActionsRegistry() {
                 global.collectLog = true;
             }
 
-            _clone(dependency.src, target, options, dependency.credentials, function (err, res) {
-                if (!err) {
-                    callback(err, `Finished clone action on dependency ${dependency.name}`);
-                }
-            });
+            if(typeof action.commit !== "undefined"){
+                //Do a shallow clone (for a specific commit)
+                options['commitNo'] = action.commit
+                
+                _shallow_clone(dependency.src, target, options, dependency.credentials, function (err, res) {
+                    let msg;
+                    if (!err) {
+                        msg = `Finished shallow clone action on dependency ${dependency.name}`;
+                    }
+                    callback(err, msg);
+                });
+            }
+            else{
+                //Do a normal clone
+                _clone(dependency.src, target, options, dependency.credentials, function (err, res) {
+                    let msg;
+                    if (!err) {
+                        msg = `Finished clone action on dependency ${dependency.name}`;
+                    }
+                    callback(err, msg);
+                });
+            }
         }
     };
 
@@ -392,6 +444,77 @@ function ActionsRegistry() {
                 callback(null, "");
             }
         });
+    };
+
+    
+    let _shallow_clone = function (remote, tmpFolder, options, credentials, callback) {
+        let commandExists = _commandExistsSync("git");
+        if (!commandExists) {
+            throw "git command does not exist! Please install git and run again the program!"
+        }
+
+        //TODO: assert commitNo is inside the options
+        let commitNo = options['commitNo'];
+
+        let optionsCmd = "";
+        for (let op in options) {
+            if (op == 'commit') continue;
+            optionsCmd += " --" + op + "=" + options[op];
+        }
+        
+        optionsCmd += commitNo;
+
+        remote = _parseRemoteHttpUrl(remote, credentials);
+
+
+        //1 Make folder and go inside it
+        fs.mkdir(tmpFolder, {recursive : true}, (err) => {
+            if(err) throw err;
+
+            try{
+
+                //2 Init repo
+                let cmdInit = `cd ${tmpFolder} && git init`;
+                console.log(cmdInit);                
+                try{
+                    child_process.execSync(cmdInit);
+                } catch(err){
+                    console.log(err);
+                }
+                
+
+                //2.1 Add remote repo
+                let cmdAddRemote = `cd ${tmpFolder} && git remote add origin ${remote}`;
+                console.log(cmdAddRemote);
+                try{
+                    child_process.execSync(cmdAddRemote);
+                } catch(err){
+                    console.log(err);
+                }
+
+                //3 Fetch repo at certain commit no
+                let cmdFetch = `cd ${tmpFolder} && git fetch ` + remote + ' --depth=1 '+ commitNo;
+                console.log(cmdFetch);
+                try{
+                    child_process.execSync(cmdFetch);
+                } catch(err){
+                    console.log(err);
+                }
+
+                //4 Checkout commit number
+                let cmdCheckout = `cd ${tmpFolder} && git checkout ` + commitNo;
+                console.log(cmdCheckout);
+                try{
+                    child_process.execSync(cmdCheckout);
+                } catch(err){
+                    console.log(err);
+                }
+
+            } catch(ex){
+                callback(ex);
+            }
+            callback();
+        })        
     };
 
     let _parseRemoteHttpUrl = function (remote, credentials) {
@@ -547,18 +670,6 @@ function ActionsRegistry() {
         } catch (error) {
             return false;
         }
-
-        return _localExecutableSync(commandName);
-
-    };
-
-    let _localExecutableSync = function (commandName) {
-        try {
-            accessSync(commandName, constants.F_OK | constants.X_OK);
-            return true;
-        } catch (e) {
-            return false;
-        }
     };
 
     /**
@@ -679,24 +790,31 @@ function ActionsRegistry() {
 		if (!action.cmd) {
 			throw "No command given";
 		}
-		let child;
-		try {
-			console.log("Running command:", action.cmd);
-			if (typeof action.options !== "undefined") {
-				console.log("with opts:", action.options);
+		
+		if (!action.os || (action.os && action.os == os.platform()) ){
+				
+			let child;
+			try {
+				console.log("Running command:", action.cmd);
+				if (typeof action.options !== "undefined") {
+					console.log("with opts:", action.options);
+				}
+				//child_process.execSync(action.cmd, action.options);
+				const options = {
+					stdio: "inherit",
+					shell: true
+				};
+				Object.assign(options, action.options);
+				child = child_process.spawnSync(action.cmd, action.args, options);
+			} catch (err) {
+				if (callback) {
+					callback(err);
+				}
 			}
-			//child_process.execSync(action.cmd, action.options);
-			const options = {
-				stdio: "inherit",
-				shell: true
-			};
-			Object.assign(options, action.options);
-			child = child_process.spawnSync(action.cmd, action.args, options);
-		} catch (err) {
-			if (callback) {
-				callback(err);
-			}
-		}
+        } else {
+            console.log("Skipping command [" + action.cmd +  "] because was not meant for your curent OS.")
+        }
+
 	/*	let err;
 		if (child.status !== 0) {
 			err = new Error(`Command finished with exit code ${child.status}. Hint: inspect command configuration, environment variables etc. and try again.`);
@@ -713,15 +831,24 @@ function ActionsRegistry() {
             throw "No command given";
         }
         console.log("Running command:", action.cmd, "with opts:", action.options);
-        child_process.exec(action.cmd, action.options, function(err, stdout, stderr){
-            if(err){
-                return callback(err);
-            }
-            console.log(stdout);
-            console.log(stderr);
-            callback(undefined, `Execute command finished.`);
+		if (!action.os || (action.os && action.os == os.platform()) ){
+			child_process.exec(action.cmd, action.options, function(err, stdout, stderr){
+				if(err){
+					return callback(err);
+				}
+				console.log(stdout);
+				console.log(stderr);
+				callback(undefined, `Execute command finished.`);
 
-        });
+			});
+		} else {
+            console.log("Skipping command [" + action.cmd +  "] because was not meant for your curent OS.")
+
+			if (callback) {
+				callback();
+			}
+		}
+		
     };
 
     this.registerActionHandler = function (name, handler, overwrite) {

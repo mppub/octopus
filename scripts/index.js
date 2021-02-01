@@ -1,6 +1,6 @@
 const path = require("path");
-//path.resolve(path.join(__dirname, "./../octopus.json"));
-let CONFIG_FILE_PATH = path.resolve("./octopus.json");
+const developmentFileName = "./octopus.json";
+const freezeFileName = "./octopus-freeze.json";
 
 function createBasicConfig(...configParts) {
 	return {"workDir": ".", "dependencies": [...configParts]};
@@ -8,12 +8,13 @@ function createBasicConfig(...configParts) {
 
 function readConfig(disableInitialization) {
 	let config;
+	let configFileName = getConfigFile();
 	try {
-		console.log("Looking for configuration file at path", CONFIG_FILE_PATH);
-		config = require(CONFIG_FILE_PATH);
+		console.log("Looking for configuration file at path", configFileName);
+		config = require(configFileName);
 	} catch (err) {
 		if (err.code === "MODULE_NOT_FOUND") {
-			console.log("Configuration file octopus.json not found. Creating a new config object.");
+			console.log("Configuration file " + configFileName + " not found. Creating a new config object.");
 			config = createBasicConfig();
 			let privateSkyRepo;
 			console.log("Looking for PRIVATESKY_REPO_NAME as env variable. It can be used to change what PrivateSky repo will be user: psk-release or privatesky.");
@@ -31,7 +32,7 @@ function readConfig(disableInitialization) {
 						"src": `http://github.com/privatesky/${privateSkyRepo}.git`,
 						"actions": [
 							{
-								"type": "smartClone",
+								"type": "smartClone",								
 								"target": ".",
 								"collectLog": false
 							},
@@ -49,6 +50,7 @@ function readConfig(disableInitialization) {
 	return config;
 }
 
+let CONFIG_FILE_PATH;
 function updateConfig(config, callback) {
 	const fs = require("fs");
 	try {
@@ -94,11 +96,32 @@ function changeConfigFile(configFilePath){
 	CONFIG_FILE_PATH = path.resolve(configFilePath);
 }
 
+function setConfigFileToMode(development){
+	CONFIG_FILE_PATH = development ? developmentFileName : freezeFileName;
+	CONFIG_FILE_PATH = path.resolve(CONFIG_FILE_PATH);
+}
+
+/**Returns current configuration file*/
+function getConfigFile(){
+	if(typeof CONFIG_FILE_PATH === "undefined"){
+		setConfigFileToMode(isDevelopment());
+	}
+	return CONFIG_FILE_PATH;
+}
+
+//DEV flag is set inside the env.json file by [script]/setEnv.js file
+function isDevelopment(){
+	return process.env.DEV === "true";
+}
+
 module.exports = {
 	createBasicConfig,
 	readConfig,
 	updateConfig,
 	runConfig,
 	handleError,
-	changeConfigFile
+	changeConfigFile,
+	setConfigFileToMode,
+	getConfigFile,
+	isDevelopment
 };
