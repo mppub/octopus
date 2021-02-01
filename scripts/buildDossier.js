@@ -1,5 +1,5 @@
 const DEFAULT_PSK_BUNDLES_PATH = "./../privatesky/psknode/bundles";
-const DEFAULT_BUILD_CONF_PATH = './bin/buildCommands.json';
+const DEFAULT_BUILD_CONF_PATH = './bin/build.file';
 const DEFAULT_SEED_PATH = './seed';
 const DEFAULT_DOMAIN = "default";
 
@@ -9,9 +9,9 @@ const DOMAIN_TAG = "--domain=";
 
 const parse_arguments = function(arguments){
     let config, seed, domain, bundles;
-    for (let a in arguments){
+    arguments.forEach(a => {
         if (!a)
-            continue;
+            return;
         if (a.includes(BUNDLES_TAG))
             bundles = a.replace(BUNDLES_TAG, '');
         else if (a.includes(DOMAIN_TAG))
@@ -23,7 +23,7 @@ const parse_arguments = function(arguments){
             config = a;
         else
             throw new Error("invalid arguments. Only one path to build file is accepted")
-    }
+    });
 
     return {
         "seed": seed || DEFAULT_SEED_PATH,
