@@ -7,6 +7,8 @@ const BUNDLES_TAG = "--bundles=";
 const SEED_TAG = "--seed=";
 const DOMAIN_TAG = "--domain=";
 
+const path = require('path');
+
 const parse_arguments = function(arguments){
     let config, seed, domain, bundles;
     arguments.forEach(a => {
@@ -39,7 +41,7 @@ const buildDossier = function(cfg, commands, callback){
         commands = [];
     }
 
-    let openDSU_bundle = require('path').join(process.cwd(), cfg.bundles, "openDSU.js");
+    let openDSU_bundle = path.join(process.cwd(), cfg.bundles, "openDSU.js");
     require(openDSU_bundle);
 
     let dossier_builder = require('opendsu').loadApi('dt').getDossierBuilder();
@@ -61,7 +63,7 @@ const buildCallback = function(err, result){
 const getCommands = function(data){
     if (!data)
         return [];
-    return data.split(/\r?\n/);
+    return data.split(/\r?\n/).filter(cmd => !!cmd.trim());
 };
 
 let args = process.argv;
