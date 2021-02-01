@@ -35,19 +35,6 @@ const parse_arguments = function(arguments){
     }
 };
 
-const buildDossier = function(cfg, commands, callback){
-    if (typeof commands === 'function'){
-        callback = commands;
-        commands = [];
-    }
-
-    let openDSU_bundle = path.join(process.cwd(), cfg.bundles, "openDSU.js");
-    require(openDSU_bundle);
-
-    let dossier_builder = require('opendsu').loadApi('dt').getDossierBuilder();
-    dossier_builder.buildDossier(cfg, commands, callback);
-}
-
 const buildCallback = function(err, result){
     let projectName = path.basename(process.cwd());
 
@@ -65,6 +52,40 @@ const getCommands = function(data){
         return [];
     return data.split(/\r?\n/).filter(cmd => !!cmd.trim());
 };
+
+/**
+ * Octopus Script to aid in the Dossier Building process via the 'dt' api DossierBuilder
+ * Accepted Arguments:
+ * * (optional) path to build file (defaults to ./bin/build.file)
+ * Flags:
+ *  * bundles: sets the bundles path, ex:
+ * <pre>
+ *     --bundles=./../.../privatesky/bundles
+ * </pre>
+ * defaults to './../privatesky/bundles'
+ * * seed: sets the path for the seed file of the dossier being build, ex:
+ * <pre>
+ *     --seed=./../seed
+ * </pre>
+ * defaults to './seed'
+ * * domain: sets the desired domain, ex:
+ * <pre>
+ *     --domain=epi
+ * </pre>
+ * defaults to 'default'
+ */
+const buildDossier = function(cfg, commands, callback){
+    if (typeof commands === 'function'){
+        callback = commands;
+        commands = [];
+    }
+
+    let openDSU_bundle = path.join(process.cwd(), cfg.bundles, "openDSU.js");
+    require(openDSU_bundle);
+
+    let dossier_builder = require('opendsu').loadApi('dt').getDossierBuilder();
+    dossier_builder.buildDossier(cfg, commands, callback);
+}
 
 let args = process.argv;
 args.splice(0,2);
