@@ -1,4 +1,5 @@
 const DEFAULT_PSK_BUNDLES_PATH = "./../privatesky/psknode/bundles";
+
 const DEFAULT_BUILD_CONF_PATH = './bin/build.file';
 const DEFAULT_SEED_PATH = './seed';
 const DEFAULT_DOMAIN = "default";
@@ -87,10 +88,12 @@ const buildDossier = function(cfg, commands, callback){
     dossier_builder.buildDossier(cfg, commands, callback);
 }
 
+
 let args = process.argv;
 args.splice(0,2);
 
 const octopus = require("./index.js");
+
 if (args.length > 4)
     octopus.handleError("Expected to receive 1 optional param <buildFile> path the the build file. defaults to './bin/build.json'");
 
