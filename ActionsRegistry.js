@@ -287,18 +287,18 @@ function ActionsRegistry() {
                             let commitNo = action.commit;
                             //let repoName = dependency.name;
 
-                            let cmdFetch = 'git fetch ' + remote + ' --depth=1 '+ commitNo;                            
+                            let cmdFetch = 'git fetch ' + remote + ' --depth=1 '+ commitNo;
                             try {
-                                let fetchResultLog = child_process.execSync(cmdFetch, {cwd: path.resolve(target)} /*basicProcOptions*/).toString();                                
+                                let fetchResultLog = child_process.execSync(cmdFetch, {cwd: path.resolve(target)} /*basicProcOptions*/).toString();
                                 console.log("Result of fetching of version", changeSet, fetchResultLog);
                             } catch (err) {
                                 console.log(err);
                             }
 
                             //2 - Checkout
-                            let cmdCheckout = 'git checkout ' + commitNo;                            
+                            let cmdCheckout = 'git checkout ' + commitNo;
                             try {
-                                let checkoutResultLog = child_process.execSync(cmdCheckout, {cwd: path.resolve(target)} /*, basicProcOptions*/).toString();                                
+                                let checkoutResultLog = child_process.execSync(cmdCheckout, {cwd: path.resolve(target)} /*, basicProcOptions*/).toString();
                                 console.log("Result of checkout of version", changeSet, checkoutResultLog);
                             } catch (err) {
                                 console.log(err);
@@ -355,7 +355,7 @@ function ActionsRegistry() {
             if(typeof action.commit !== "undefined"){
                 //Do a shallow clone (for a specific commit)
                 options['commitNo'] = action.commit
-                
+
                 _shallow_clone(dependency.src, target, options, dependency.credentials, function (err, res) {
                     let msg;
                     if (!err) {
@@ -447,7 +447,7 @@ function ActionsRegistry() {
         });
     };
 
-    
+
     let _shallow_clone = function (remote, tmpFolder, options, credentials, callback) {
         let commandExists = _commandExistsSync("git");
         if (!commandExists) {
@@ -462,7 +462,7 @@ function ActionsRegistry() {
             if (op == 'commit') continue;
             optionsCmd += " --" + op + "=" + options[op];
         }
-        
+
         optionsCmd += commitNo;
 
         remote = _parseRemoteHttpUrl(remote, credentials);
@@ -476,13 +476,13 @@ function ActionsRegistry() {
 
                 //2 Init repo
                 let cmdInit = `cd ${tmpFolder} && git init`;
-                console.log(cmdInit);                
+                console.log(cmdInit);
                 try{
                     child_process.execSync(cmdInit);
                 } catch(err){
                     console.log(err);
                 }
-                
+
 
                 //2.1 Add remote repo
                 let cmdAddRemote = `cd ${tmpFolder} && git remote add origin ${remote}`;
@@ -515,7 +515,7 @@ function ActionsRegistry() {
                 callback(ex);
             }
             callback();
-        })        
+        })
     };
 
     let _parseRemoteHttpUrl = function (remote, credentials) {
@@ -791,9 +791,9 @@ function ActionsRegistry() {
 		if (!action.cmd) {
 			throw "No command given";
 		}
-		
+
 		if (!action.os || (action.os && action.os == os.platform()) ){
-				
+
 			let child;
 			try {
 				console.log("Running command:", action.cmd);
@@ -849,7 +849,7 @@ function ActionsRegistry() {
 				callback();
 			}
 		}
-		
+
     };
 
     this.registerActionHandler = function (name, handler, overwrite) {
