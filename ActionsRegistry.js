@@ -243,13 +243,15 @@ function ActionsRegistry() {
     };
 
     actions.smartClone = function (action, dependency, callback) {
-        if (!dependency || !dependency.src) {
+        let src = action.src || dependency.src;
+
+        if (!src) {
             throw "No source (src) attribute found on: " + JSON.stringify(dependency);
         }
 
         let target = os.tmpdir();
         if (action.target) {
-            target = fsExt.resolvePath(path.join(action.target, dependency.name));
+            target = fsExt.resolvePath(path.join(action.target, action.name || dependency.name));
         }
 
         // the target if exists and it's a git repo we try update
@@ -262,7 +264,7 @@ function ActionsRegistry() {
                 if (err) {
                     console.log(err);
                 } else {
-                    let originFetchRegex = new RegExp('^[origin]*\\s*' + dependency.src + '[.git]*\\s*\\(fetch\\)', 'g');
+                    let originFetchRegex = new RegExp('^[origin]*\\s*' + src + '[.git]*\\s*\\(fetch\\)', 'g');
                     let matchedArr = stdout.match(originFetchRegex)
                     if (!matchedArr) {
                         throw new Error(`Different remotes found on repo ${target}`);
@@ -280,10 +282,10 @@ function ActionsRegistry() {
                         if(typeof action.commit !== "undefined"){ //We have a commit no
                             /**
                              * The pull is nothing that a fetch + checkout
-                            */
+                             */
 
-                            //1 - Fetch
-                            let remote = dependency.src;
+                                //1 - Fetch
+                            let remote = src;
                             let commitNo = action.commit;
                             //let repoName = dependency.name;
 
@@ -356,7 +358,7 @@ function ActionsRegistry() {
                 //Do a shallow clone (for a specific commit)
                 options['commitNo'] = action.commit
 
-                _shallow_clone(dependency.src, target, options, dependency.credentials, function (err, res) {
+                _shallow_clone(src, target, options, dependency.credentials, function (err, res) {
                     let msg;
                     if (!err) {
                         msg = `Finished shallow clone action on dependency ${dependency.name}`;
@@ -366,7 +368,7 @@ function ActionsRegistry() {
             }
             else{
                 //Do a normal clone
-                _clone(dependency.src, target, options, dependency.credentials, function (err, res) {
+                _clone(src, target, options, dependency.credentials, function (err, res) {
                     let msg;
                     if (!err) {
                         msg = `Finished clone action on dependency ${dependency.name}`;
