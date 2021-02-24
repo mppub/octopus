@@ -7,7 +7,6 @@ const http = require('http');
 const https = require('https');
 
 const fsExt = require('./lib/utils/FSExtension').fsExt;
-const WebCardinal = require('./lib/webcardinal');
 
 const changeSet = "latest-change-set.txt";
 const mergeChangeSet = "Merge";
@@ -850,108 +849,6 @@ function ActionsRegistry() {
 			}
 		}
 		
-    };
-
-    /**
-     * cloneWebCardinalComponents
-     * @description Clones all @webcardinal/<component>s and @cardinal/<component>s.
-     *              Also clones automatically @cardinal/internals if it is needed.
-     *
-     * @param {Object} action
-     * @param {Object} dependency
-     */
-    actions.cloneWebCardinalComponents = function (action, dependency) {
-        let target = action.target || dependency.target;
-        // WebCardinal.Installer has a default target
-
-        let components = action.components;
-        if (!components) {
-            throw `No components attribute found on: ${JSON.stringify(action)}`;
-        }
-
-        if (!Array.isArray(components)) {
-            throw `Attribute components must be an array! (${JSON.stringify(action)})`;
-        }
-
-        const clone = async () => {
-            const { Installer, TAG } = WebCardinal;
-            try {
-                const octopus = require('./Runner');
-                const installer = new Installer(octopus, target, components);
-                await installer.clone();
-                await installer.install();
-                console.log(TAG, 'cloneWebCardinalComponents command finished.');
-            } catch (error) {
-                console.error(TAG, error);
-            }
-        }
-
-        clone().then();
-    }
-
-    /**
-     * buildWebCardinalComponents
-     * @description Builds and merges all @webcardinal/<component>s and @cardinal/<component>s.
-     *
-     * @param {Object} action
-     * @param {Object} dependency
-     */
-    actions.buildWebCardinalComponents = function (action, dependency) {
-        let src = action.src || dependency.src;
-        let target = action.target;
-        // WebCardinal.Builder has default values for src and target
-
-        let options = action.options || { DEV: false, devComponents: null };
-
-        const build = async () => {
-            const { Builder, TAG } = WebCardinal;
-            try {
-                const octopus = require('./Runner');
-                const builder = new Builder(octopus, src, target, options);
-                if (!options.devComponents) {
-                    // build all and merge (default)
-                    await builder.build();
-                    await builder.copy();
-                    await builder.merge();
-                } else {
-                    // targeted build (development use only)
-                    await builder.build(options.devComponents);
-                    await builder.copy(options.devComponents);
-                }
-                console.log(TAG, 'buildWebCardinalComponents command finished.');
-            } catch (error) {
-                console.error(TAG, error);
-            }
-        }
-
-        build().then();
-    };
-
-    /**
-     * buildWebCardinalThemes
-     * @description Action for building Cardinal Themes made for CustomTheme Decorator of psk-<component>s.
-     *
-     * @param {Object} action
-     * @param {Object} dependency
-     */
-    actions.buildWebCardinalThemes = function (action, dependency) {
-        let src = action.src || dependency.src;
-        let target = action.target;
-        // WebCardinal.ThemesBuilder has default values for src and target
-
-        const build = async () => {
-            const { ThemeBuilder, TAG } = WebCardinal;
-            try {
-                const octopus = require('./Runner');
-                const builder = new ThemeBuilder(octopus, src, target);
-                await builder.copy();
-                console.log(TAG, 'buildWebCardinalThemes command finished.');
-            } catch (error) {
-                console.error(TAG, error);
-            }
-        }
-
-        build().then();
     };
 
     this.registerActionHandler = function (name, handler, overwrite) {
