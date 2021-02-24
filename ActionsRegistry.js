@@ -7,6 +7,7 @@ const http = require('http');
 const https = require('https');
 
 const fsExt = require('./lib/utils/FSExtension').fsExt;
+const WebCardinal = require('./lib/webcardinal/actions');
 
 const changeSet = "latest-change-set.txt";
 const mergeChangeSet = "Merge";
@@ -901,6 +902,8 @@ function ActionsRegistry() {
 }
 
 let defaultActionsRegistry = new ActionsRegistry();
+
+defaultActionsRegistry.registerActionHandler('buildWebCardinalComponents', WebCardinal.buildComponents);
 
 exports.getRegistry = function () {
     return defaultActionsRegistry;
