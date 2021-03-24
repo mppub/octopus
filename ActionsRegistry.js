@@ -7,7 +7,7 @@ const http = require('http');
 const https = require('https');
 
 const fsExt = require('./lib/utils/FSExtension').fsExt;
-const WebCardinal = require('./lib/webcardinal');
+const WebCardinal = require('./lib/webcardinal/actions');
 
 const changeSet = "latest-change-set.txt";
 const mergeChangeSet = "Merge";
@@ -243,13 +243,15 @@ function ActionsRegistry() {
     };
 
     actions.smartClone = function (action, dependency, callback) {
-        if (!dependency || !dependency.src) {
+        let src = action.src || dependency.src;
+
+        if (!src) {
             throw "No source (src) attribute found on: " + JSON.stringify(dependency);
         }
 
         let target = os.tmpdir();
         if (action.target) {
-            target = fsExt.resolvePath(path.join(action.target, dependency.name));
+            target = fsExt.resolvePath(path.join(action.target, action.name || dependency.name));
         }
 
         // the target if exists and it's a git repo we try update
@@ -262,7 +264,7 @@ function ActionsRegistry() {
                 if (err) {
                     console.log(err);
                 } else {
-                    let originFetchRegex = new RegExp('^[origin]*\\s*' + dependency.src + '[.git]*\\s*\\(fetch\\)', 'g');
+                    let originFetchRegex = new RegExp('^[origin]*\\s*' + src + '[.git]*\\s*\\(fetch\\)', 'g');
                     let matchedArr = stdout.match(originFetchRegex)
                     if (!matchedArr) {
                         throw new Error(`Different remotes found on repo ${target}`);
@@ -280,25 +282,25 @@ function ActionsRegistry() {
                         if(typeof action.commit !== "undefined"){ //We have a commit no
                             /**
                              * The pull is nothing that a fetch + checkout
-                            */
+                             */
 
-                            //1 - Fetch
-                            let remote = dependency.src;
+                                //1 - Fetch
+                            let remote = src;
                             let commitNo = action.commit;
                             //let repoName = dependency.name;
 
-                            let cmdFetch = 'git fetch ' + remote + ' --depth=1 '+ commitNo;                            
+                            let cmdFetch = 'git fetch ' + remote + ' --depth=1 '+ commitNo;
                             try {
-                                let fetchResultLog = child_process.execSync(cmdFetch, {cwd: path.resolve(target)} /*basicProcOptions*/).toString();                                
+                                let fetchResultLog = child_process.execSync(cmdFetch, {cwd: path.resolve(target)} /*basicProcOptions*/).toString();
                                 console.log("Result of fetching of version", changeSet, fetchResultLog);
                             } catch (err) {
                                 console.log(err);
                             }
 
                             //2 - Checkout
-                            let cmdCheckout = 'git checkout ' + commitNo;                            
+                            let cmdCheckout = 'git checkout ' + commitNo;
                             try {
-                                let checkoutResultLog = child_process.execSync(cmdCheckout, {cwd: path.resolve(target)} /*, basicProcOptions*/).toString();                                
+                                let checkoutResultLog = child_process.execSync(cmdCheckout, {cwd: path.resolve(target)} /*, basicProcOptions*/).toString();
                                 console.log("Result of checkout of version", changeSet, checkoutResultLog);
                             } catch (err) {
                                 console.log(err);
@@ -355,8 +357,8 @@ function ActionsRegistry() {
             if(typeof action.commit !== "undefined"){
                 //Do a shallow clone (for a specific commit)
                 options['commitNo'] = action.commit
-                
-                _shallow_clone(dependency.src, target, options, dependency.credentials, function (err, res) {
+
+                _shallow_clone(src, target, options, dependency.credentials, function (err, res) {
                     let msg;
                     if (!err) {
                         msg = `Finished shallow clone action on dependency ${dependency.name}`;
@@ -366,7 +368,7 @@ function ActionsRegistry() {
             }
             else{
                 //Do a normal clone
-                _clone(dependency.src, target, options, dependency.credentials, function (err, res) {
+                _clone(src, target, options, dependency.credentials, function (err, res) {
                     let msg;
                     if (!err) {
                         msg = `Finished clone action on dependency ${dependency.name}`;
@@ -447,7 +449,7 @@ function ActionsRegistry() {
         });
     };
 
-    
+
     let _shallow_clone = function (remote, tmpFolder, options, credentials, callback) {
         let commandExists = _commandExistsSync("git");
         if (!commandExists) {
@@ -462,7 +464,7 @@ function ActionsRegistry() {
             if (op == 'commit') continue;
             optionsCmd += " --" + op + "=" + options[op];
         }
-        
+
         optionsCmd += commitNo;
 
         remote = _parseRemoteHttpUrl(remote, credentials);
@@ -476,13 +478,13 @@ function ActionsRegistry() {
 
                 //2 Init repo
                 let cmdInit = `cd ${tmpFolder} && git init`;
-                console.log(cmdInit);                
+                console.log(cmdInit);
                 try{
                     child_process.execSync(cmdInit);
                 } catch(err){
                     console.log(err);
                 }
-                
+
 
                 //2.1 Add remote repo
                 let cmdAddRemote = `cd ${tmpFolder} && git remote add origin ${remote}`;
@@ -515,7 +517,7 @@ function ActionsRegistry() {
                 callback(ex);
             }
             callback();
-        })        
+        })
     };
 
     let _parseRemoteHttpUrl = function (remote, credentials) {
@@ -791,9 +793,9 @@ function ActionsRegistry() {
 		if (!action.cmd) {
 			throw "No command given";
 		}
-		
+
 		if (!action.os || (action.os && action.os == os.platform()) ){
-				
+
 			let child;
 			try {
 				console.log("Running command:", action.cmd);
@@ -849,109 +851,7 @@ function ActionsRegistry() {
 				callback();
 			}
 		}
-		
-    };
 
-    /**
-     * cloneWebCardinalComponents
-     * @description Clones all @webcardinal/<component>s and @cardinal/<component>s.
-     *              Also clones automatically @cardinal/internals if it is needed.
-     *
-     * @param {Object} action
-     * @param {Object} dependency
-     */
-    actions.cloneWebCardinalComponents = function (action, dependency) {
-        let target = action.target || dependency.target;
-        // WebCardinal.Installer has a default target
-
-        let components = action.components;
-        if (!components) {
-            throw `No components attribute found on: ${JSON.stringify(action)}`;
-        }
-
-        if (!Array.isArray(components)) {
-            throw `Attribute components must be an array! (${JSON.stringify(action)})`;
-        }
-
-        const clone = async () => {
-            const { Installer, TAG } = WebCardinal;
-            try {
-                const octopus = require('./Runner');
-                const installer = new Installer(octopus, target, components);
-                await installer.clone();
-                await installer.install();
-                console.log(TAG, 'cloneWebCardinalComponents command finished.');
-            } catch (error) {
-                console.error(TAG, error);
-            }
-        }
-
-        clone().then();
-    }
-
-    /**
-     * buildWebCardinalComponents
-     * @description Builds and merges all @webcardinal/<component>s and @cardinal/<component>s.
-     *
-     * @param {Object} action
-     * @param {Object} dependency
-     */
-    actions.buildWebCardinalComponents = function (action, dependency) {
-        let src = action.src || dependency.src;
-        let target = action.target;
-        // WebCardinal.Builder has default values for src and target
-
-        let options = action.options || { DEV: false, devComponents: null };
-
-        const build = async () => {
-            const { Builder, TAG } = WebCardinal;
-            try {
-                const octopus = require('./Runner');
-                const builder = new Builder(octopus, src, target, options);
-                if (!options.devComponents) {
-                    // build all and merge (default)
-                    await builder.build();
-                    await builder.copy();
-                    await builder.merge();
-                } else {
-                    // targeted build (development use only)
-                    await builder.build(options.devComponents);
-                    await builder.copy(options.devComponents);
-                }
-                console.log(TAG, 'buildWebCardinalComponents command finished.');
-            } catch (error) {
-                console.error(TAG, error);
-            }
-        }
-
-        build().then();
-    };
-
-    /**
-     * buildWebCardinalThemes
-     * @description Action for building Cardinal Themes made for CustomTheme Decorator of psk-<component>s.
-     *
-     * @param {Object} action
-     * @param {Object} dependency
-     */
-    actions.buildWebCardinalThemes = function (action, dependency) {
-        let src = action.src || dependency.src;
-        let target = action.target;
-        // WebCardinal.ThemesBuilder has default values for src and target
-
-        const build = async () => {
-            const { ThemeBuilder, TAG } = WebCardinal;
-            try {
-                const octopus = require('./Runner');
-                const builder = new ThemeBuilder(octopus, src, target);
-                await builder.copy();
-                console.log(TAG, 'buildWebCardinalThemes command finished.');
-            } catch (error) {
-                console.error(TAG, error);
-            }
-        }
-
-        build().then();
     };
 
     this.registerActionHandler = function (name, handler, overwrite) {
@@ -1004,6 +904,8 @@ function ActionsRegistry() {
 }
 
 let defaultActionsRegistry = new ActionsRegistry();
+
+defaultActionsRegistry.registerActionHandler('buildWebCardinalComponents', WebCardinal.buildComponents);
 
 exports.getRegistry = function () {
     return defaultActionsRegistry;

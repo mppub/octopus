@@ -226,13 +226,16 @@ function Runner() {
 
         //let self = this;
 
-        function next(error, result) {
+        function next(error, result, payload) {
             if (error) {
                 if (self.callback) {
                     self.callback(error, null);
                     return;
                 }
             } else {
+                if (payload && payload.tasks) {
+                    self.tasks = payload.tasks;
+                }
                 if (result) {
                     console.log("taskIndex:", depIndex, "actionIndex:", actionIndex, "result:", JSON.stringify(result));
                 }
