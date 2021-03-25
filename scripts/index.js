@@ -1,6 +1,17 @@
+const fs = require("fs");
 const path = require("path");
-const developmentFileName = "./octopus.json";
-const freezeFileName = "./octopus-freeze.json";
+
+let CONFIG_FILE_PATH;
+let CONFIG_FILE = {
+	DEV: {
+		JSON: "./octopus.json",
+		OCTOPUS: "./.octopus"
+	},
+	FREEZE: {
+		JSON: "./octopus-freeze.json",
+		OCTOPUS: "./.octopus-freeze"
+	}
+};
 
 function createBasicConfig(...configParts) {
 	return {"workDir": ".", "dependencies": [...configParts]};
@@ -11,7 +22,12 @@ function readConfig(disableInitialization) {
 	let configFileName = getConfigFile();
 	try {
 		console.log("Looking for configuration file at path", configFileName);
-		config = require(configFileName);
+		if (configFileName.endsWith('json')) {
+			config = require(configFileName);
+		} else {
+			const toJSON = require('../lib/config-converter/toJSON');
+			config = toJSON(fs.readFileSync(configFileName, 'utf8')).config;
+		}
 	} catch (err) {
 		if (err.code === "MODULE_NOT_FOUND") {
 			console.log("Configuration file " + configFileName + " not found. Creating a new config object.");
@@ -50,11 +66,16 @@ function readConfig(disableInitialization) {
 	return config;
 }
 
-let CONFIG_FILE_PATH;
 function updateConfig(config, callback) {
-	const fs = require("fs");
+	if (CONFIG_FILE_PATH.endsWith('json')) {
+		config = JSON.stringify(config, null, 4)
+	} else {
+		const toOctopus = require('../lib/config-converter/toOctopus');
+		config = toOctopus(config).config;
+	}
+
 	try {
-		fs.writeFile(CONFIG_FILE_PATH, JSON.stringify(config, null, 4), callback);
+		fs.writeFile(CONFIG_FILE_PATH, config, callback);
 	} catch (e) {
 		callback(e);
 	}
@@ -97,8 +118,14 @@ function changeConfigFile(configFilePath){
 }
 
 function setConfigFileToMode(development){
-	CONFIG_FILE_PATH = development ? developmentFileName : freezeFileName;
-	CONFIG_FILE_PATH = path.resolve(CONFIG_FILE_PATH);
+	const config = development ? CONFIG_FILE.DEV : CONFIG_FILE.FREEZE;
+
+	if (fs.existsSync(path.resolve(CONFIG_FILE.DEV.OCTOPUS)) ||
+		fs.existsSync(path.resolve(CONFIG_FILE.FREEZE.OCTOPUS))) {
+		CONFIG_FILE_PATH = path.resolve(config.OCTOPUS);
+	} else {
+		CONFIG_FILE_PATH = path.resolve(config.JSON);
+	}
 }
 
 /**Returns current configuration file*/
@@ -123,5 +150,6 @@ module.exports = {
 	changeConfigFile,
 	setConfigFileToMode,
 	getConfigFile,
-	isDevelopment
+	isDevelopment,
+	CONFIG_FILE
 };
