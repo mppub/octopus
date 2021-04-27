@@ -33,9 +33,10 @@ function freezeConfig(config){
          * Else take current commit no (current head) from git
          */
         // if(typeof action.commit == "undefined"){
-            let targetFolder = path.resolve(path.join(config.workDir, task.name));
+            const name = action.name || task.name;
+            let targetFolder = path.resolve(path.join(config.workDir, name));
             if (action.target) {
-                targetFolder = path.resolve(path.join(action.target, task.name));
+                targetFolder = path.resolve(path.join(action.target, name));
             }
             console.log(`Trying to locate target ${targetFolder} in order to save it's state.`);
             basicProcOptions = {cwd: targetFolder};
