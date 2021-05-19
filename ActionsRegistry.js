@@ -812,7 +812,7 @@ function ActionsRegistry() {
 				const executionFailReason = (child.status === null && child.signal) ? child.signal : child.status;
 				const label = (child.status === null && child.signal) ? "signal" : "exit code";
 				if(executionFailReason && !options.ignoreErrors){
-				    return callback(`Command execute finished: ${label} ${executionFailReason}`);
+				    return callback(`Action execute finished: ${label} ${executionFailReason}`);
                 }
 			} catch (err) {
 				if (callback) {
