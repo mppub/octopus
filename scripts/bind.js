@@ -19,7 +19,7 @@ if (args.length !== 2) {
 const solutionName = args[0];
 const targetName = args[1];
 
-const config = octopus.readConfig(true);
+const config = octopus.readConfig();
 
 function buildIdentifier() {
 	return `${solutionName}_bind_to_${targetName}`;

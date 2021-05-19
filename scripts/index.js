@@ -17,7 +17,7 @@ function createBasicConfig(...configParts) {
 	return {"workDir": ".", "dependencies": [...configParts]};
 }
 
-function readConfig(disableInitialization) {
+function readConfig() {
 	let config;
 	let configFileName = getConfigFile();
 	try {
@@ -38,26 +38,6 @@ function readConfig(disableInitialization) {
 				privateSkyRepo = process.env.PRIVATESKY_REPO_NAME;
 			}else{
 				privateSkyRepo = "privatesky";
-			}
-
-			if(!disableInitialization){
-				// we need a default privatesky instance in order to have access to Brick Storage
-				config.dependencies.push(
-					{
-						"name": "privatesky",
-						"src": `http://github.com/privatesky/${privateSkyRepo}.git`,
-						"actions": [
-							{
-								"type": "smartClone",								
-								"target": ".",
-								"collectLog": false
-							},
-							{
-								"type": "execute",
-								"cmd": `cd privatesky && npm install && npm run build`
-							}
-						]
-					});
 			}
 		} else {
 			throw err;

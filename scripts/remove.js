@@ -7,7 +7,7 @@ if (args.length !== 1) {
 }
 
 let depName = args[0];
-const config = octopus.readConfig(true);
+const config = octopus.readConfig();
 
 let found = false;
 for (let i = 0; i < config.dependencies.length; i++) {
