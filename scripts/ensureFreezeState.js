@@ -1,7 +1,7 @@
 //this script needs to be runned only on freeze installation process in order to ensure that the repo it is in a freeze state
 //e.g. cloning a workspace to a different commit number and doing a npm install can generate issues and unwanted results
 
-if(process.env.DEV){
+if(process.env.DEV === "true"){
 	console.log("Skipping the rollback action to a freeze version due to the env flag DEV=true\n");
 	process.exit(0);
 }
