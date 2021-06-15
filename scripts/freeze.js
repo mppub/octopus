@@ -52,6 +52,26 @@ function freezeConfig(config){
                 } catch (err) {
                     octopus.handleError(`Not able to perform the saving state process for target ${targetFolder}. Reason:`, err);
                 }
+                
+                //validation of the commit number
+                try{
+                    child_process.execSync("git cat-file -e HEAD:octopus-freeze.json", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']}).toString().trim();
+                    //this variable will have the reference of the last commit when the octopus-freeze file was modified
+                    let freezeCommitNumber = child_process.execSync("git log -n 1 --format=\"%H\" -- octopus-freeze.json", basicProcOptions).toString().trim();
+                    if(action.commit !== freezeCommitNumber){
+                        console.log("Warning:");
+                        console.log("\t|==============================================================|");
+                        console.log("\t|It seems that the commit number that you are trying to save   |");
+                        console.log("\t|is not the same as the last commit when the module was freezed|");
+                        console.log(`\t|Last freeze : ${freezeCommitNumber}        |`);
+                        console.log(`\t|Your state  : ${action.commit}        |`);
+                        console.log("\t|==============================================================|");
+                    }else{
+                        console.log(`\t* Module <${targetFolder}> has a freeze mechanism enabled and the commit number checked. All good here!`);
+                    }
+                }catch(err){
+                    //we ignore any error caught here because this validation does not affect the freeze mechanism
+                }
             }
             else{
                 notFoundFolders.push(targetFolder);
