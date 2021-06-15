@@ -24,8 +24,6 @@ octopus.setConfigFileToMode(true);
 
 let notFoundFolders = [];
 
-let foundFreezeConflicts = false;
-
 /**Performs a freeze on current configuration loaded from file (octopus.json or octopus-dev.json) */
 function freezeConfig(config){
 
@@ -50,7 +48,7 @@ function freezeConfig(config){
                     if(out.length == 40){
                         action.commit = out;
                     }
-                    console.log(`Saved the state of ${targetFolder} at revision ${out}`);
+                    console.log(`Saving the state of ${targetFolder} at revision ${out}`);
                 } catch (err) {
                     octopus.handleError(`Not able to perform the saving state process for target ${targetFolder}. Reason:`, err);
                 }
@@ -68,14 +66,10 @@ function freezeConfig(config){
                     //this variable will have the reference of the last commit when the octopus-freeze file was modified
                     let freezeCommitNumber = child_process.execSync("git log -n 1 --format=\"%H\" -- octopus-freeze.json", basicProcOptions).toString().trim();
                     if(action.commit !== freezeCommitNumber){
-                        foundFreezeConflicts = true;
-                        console.log("Warning:");
-                        console.log("\t|==============================================================|");
-                        console.log("\t|It seems that the commit number that you are trying to save   |");
-                        console.log("\t|is not the same as the last commit when the module was freezed|");
-                        console.log(`\t|Last freeze : ${freezeCommitNumber}        |`);
-                        console.log(`\t|Your state  : ${action.commit}        |`);
-                        console.log("\t|==============================================================|");
+                        let initialCommit = action.commit;
+                        action.commit = freezeCommitNumber;
+                        console.log(`\t * Warning: Commit number was replace for the module ${targetFolder} to ${action.commit} which represents a freezed version.`);
+                        console.log(`\t If the replacement of the commit number isn't desired set manualy the commit number ${initialCommit}`)
                     }else{
                         console.log(`\t* Module <${targetFolder}> has a freeze mechanism enabled and the commit number checked. All good here!`);
                     }
@@ -130,9 +124,3 @@ octopus.updateConfig(config, (err) => {
 
     console.log("Configuration file  " + octopus.getConfigFile() +  " updated.");
 });
-
-if(foundFreezeConflicts){
-    console.log("\n***************\n\t There were some warnings related to some commit number conflicts!!!");
-    console.log("\t Check the log above to understand and verify!\n***************\n");
-    process.exit(1);
-}
