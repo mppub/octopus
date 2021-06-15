@@ -24,6 +24,8 @@ octopus.setConfigFileToMode(true);
 
 let notFoundFolders = [];
 
+let foundFreezeConflicts = false;
+
 /**Performs a freeze on current configuration loaded from file (octopus.json or octopus-dev.json) */
 function freezeConfig(config){
 
@@ -55,10 +57,18 @@ function freezeConfig(config){
                 
                 //validation of the commit number
                 try{
-                    child_process.execSync("git cat-file -e HEAD:octopus-freeze.json", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']}).toString().trim();
+                    //confirming that the module has the freeze mechanism enabled
+                    child_process.execSync("git cat-file -e HEAD:octopus-freeze.json", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
+                    //test if the repo is in a shallow clone form
+                    let isShallow = child_process.execSync("git rev-parse --is-shallow-repository", basicProcOptions).toString().trim();
+                    if(isShallow !== "false"){
+                        //convert the shallow clone to a full one in order to be able to search the last commit number for the freeze mechanism
+                        child_process.execSync("git fetch --unshallow", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
+                    }
                     //this variable will have the reference of the last commit when the octopus-freeze file was modified
                     let freezeCommitNumber = child_process.execSync("git log -n 1 --format=\"%H\" -- octopus-freeze.json", basicProcOptions).toString().trim();
                     if(action.commit !== freezeCommitNumber){
+                        foundFreezeConflicts = true;
                         console.log("Warning:");
                         console.log("\t|==============================================================|");
                         console.log("\t|It seems that the commit number that you are trying to save   |");
@@ -121,3 +131,8 @@ octopus.updateConfig(config, (err) => {
     console.log("Configuration file  " + octopus.getConfigFile() +  " updated.");
 });
 
+if(foundFreezeConflicts){
+    console.log("\n***************\n\t There were some warnings related to some commit number conflicts!!!");
+    console.log("\t Check the log above to understand and verify!\n***************\n");
+    process.exit(1);
+}
