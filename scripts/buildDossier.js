@@ -30,7 +30,7 @@ const parse_arguments = function(arguments){
 
     return {
         "seed": seed || DEFAULT_SEED_PATH,
-        "domain": domain || DEFAULT_DOMAIN,
+        "domain": domain || process.env.VAULT_DOMAIN || DEFAULT_DOMAIN,
         "bundles": bundles || DEFAULT_PSK_BUNDLES_PATH,
         "config": config || DEFAULT_BUILD_CONF_PATH
     }
