@@ -32,6 +32,7 @@ if(fs.existsSync(fileArgDevel)){
 };
 
 const {spawn} = require("child_process");
+console.log("Preparing to set on process.env the following info:", envJson);
 Object.assign(process.env, envJson);
 console.log("Environment updated accordingly to env file passed as argument.");
 
