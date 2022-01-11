@@ -279,12 +279,34 @@ function ActionsRegistry() {
                         }
 
                         //B. Pull
-                        if(typeof action.commit !== "undefined"){ //We have a commit no
+                        if (typeof action.tag !== "undefined") {
+                            //1 - Fetch
+                            let remote = src;
+                            let tag = action.tag;
+
+                            let cmdFetch = `git fetch origin tag ${tag} --depth=1 --no-tags`; // 'git fetch ' + remote + ' --depth=1 '+ tag;
+                            try {
+                                let fetchResultLog = child_process.execSync(cmdFetch, {cwd: path.resolve(target)} /*basicProcOptions*/).toString();
+                                console.log("Result of fetching of version", changeSet, fetchResultLog);
+                            } catch (err) {
+                                console.log(err);
+                            }
+
+                            //2 - Checkout
+                            let cmdCheckout = 'git checkout ' + tag;
+                            try {
+                                let checkoutResultLog = child_process.execSync(cmdCheckout, {cwd: path.resolve(target)} /*, basicProcOptions*/).toString();
+                                console.log("Result of checkout of version", changeSet, checkoutResultLog);
+                            } catch (err) {
+                                console.log(err);
+                            }
+                        }
+                        else if(typeof action.commit !== "undefined"){ //We have a commit no
                             /**
                              * The pull is nothing that a fetch + checkout
                              */
 
-                                //1 - Fetch
+                            //1 - Fetch
                             let remote = src;
                             let commitNo = action.commit;
                             //let repoName = dependency.name;
@@ -306,7 +328,7 @@ function ActionsRegistry() {
                                 console.log(err);
                             }
                         }
-                        else{ //no commit no => classic pull
+                        else { //no commit no => classic pull
                             let pullResult = child_process.execSync("git pull", basicProcOptions);
                             pullResult = pullResult.toString();
                             if (pullResult.indexOf("Already up-to-date") === -1) {
@@ -338,7 +360,8 @@ function ActionsRegistry() {
                 }
             });
             //throw `Destination path (target) ${target} already exists and is not an empty directory.`;
-        } else {
+        }
+        else {
 
             let options = {
                 "depth": "1",
@@ -354,7 +377,18 @@ function ActionsRegistry() {
                 global.collectLog = true;
             }
 
-            if(typeof action.commit !== "undefined"){
+            if(typeof action.tag !== "undefined") {
+                options['tag'] = action.tag
+
+                _shallow_clone(src, target, options, dependency.credentials, function (err, res) {
+                    let msg;
+                    if (!err) {
+                        msg = `Finished shallow clone action on dependency ${dependency.name}`;
+                    }
+                    callback(err, msg);
+                });
+            }
+            else if(typeof action.commit !== "undefined") {
                 //Do a shallow clone (for a specific commit)
                 options['commitNo'] = action.commit
 
@@ -456,8 +490,9 @@ function ActionsRegistry() {
             throw "git command does not exist! Please install git and run again the program!"
         }
 
-        //TODO: assert commitNo is inside the options
+        //TODO: assert tag/commitNo is inside the options
         let commitNo = options['commitNo'];
+        let tag = options['tag'];
 
         let optionsCmd = "";
         for (let op in options) {
@@ -495,8 +530,15 @@ function ActionsRegistry() {
                     console.log(err);
                 }
 
-                //3 Fetch repo at certain commit no
-                let cmdFetch = `cd ${tmpFolder} && git fetch ` + remote + ' --depth=1 '+ commitNo;
+                //3 Fetch repo at certain tag/commit no
+                let cmdFetch
+                if (tag) {
+                    cmdFetch = `cd ${tmpFolder} && git fetch origin tag ${tag} --depth=1 --no-tags`;
+                }
+                else {
+                    cmdFetch = `cd ${tmpFolder} && git fetch origin ${commitNo} --depth=1`;
+                }
+
                 console.log(cmdFetch);
                 try{
                     child_process.execSync(cmdFetch);
@@ -505,7 +547,7 @@ function ActionsRegistry() {
                 }
 
                 //4 Checkout commit number
-                let cmdCheckout = `cd ${tmpFolder} && git checkout ` + commitNo;
+                let cmdCheckout = `cd ${tmpFolder} && git checkout ${tag ? tag : commitNo}`;
                 console.log(cmdCheckout);
                 try{
                     child_process.execSync(cmdCheckout);
