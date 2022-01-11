@@ -43,12 +43,13 @@ function freezeConfig(config){
 
     if (fs.existsSync(targetFolder) && fs.readdirSync(targetFolder).length > 0 ) {
       //Get tag number
+      let latestTag
       try {
-        let out = child_process.execSync("git describe --tags --abbrev=0", basicProcOptions).toString().trim();
-        if(out.length == 40){
-          action.tag = out;
+        latestTag = child_process.execSync("git describe --tags --abbrev=0", basicProcOptions).toString().trim();
+        if(latestTag.length == 40){
+          action.tag = latestTag;
         }
-        console.log(`Saving the state of ${targetFolder} at tag ${out}`);
+        console.log(`Saving the state of ${targetFolder} at tag ${latestTag}`);
       } catch (err) {
         octopus.handleError(`Not able to perform the saving state process for target ${targetFolder}. Reason:`, err);
       }
@@ -64,10 +65,13 @@ function freezeConfig(config){
           //convert the shallow clone to a full one in order to be able to search the last tag number for the freeze mechanism
           child_process.execSync("git fetch --unshallow", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
         }
-        //this variable will have the reference of the last tag when the octopus-freeze file was modified
-        let freezeTagNumber = child_process.execSync("git describe --tags --abbrev=0", basicProcOptions).toString().trim();
-        if(action.tag !== freezeTagNumber){
-          let initialTag = action.tag;
+
+        // verify that the tag in the latest octopus-freeze.json is the same as the currently used tag, if not replace and print out info message
+        let freezeCommit = child_process.execSync("git log -n 1 --format=\"%H\" -- octopus-freeze.json", basicProcOptions).toString().trim();
+        let freezeTagNumber = child_process.execSync(`git describe --tags --exact-match ${freezeCommit}`, basicProcOptions).toString().trim();
+
+        if(freezeTagNumber !== latestTag){
+          let initialTag = latestTag;
           action.tag = freezeTagNumber;
           console.log(`\t * Warning: Tag number was replace for the module ${targetFolder} to ${action.tag} which represents a freezed version.`);
           console.log(`\t If the replacement of the tag number isn't desired set manualy the tag number ${initialTag}`)
