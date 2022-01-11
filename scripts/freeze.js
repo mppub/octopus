@@ -52,7 +52,7 @@ function freezeConfig(config){
                 } catch (err) {
                     octopus.handleError(`Not able to perform the saving state process for target ${targetFolder}. Reason:`, err);
                 }
-                
+
                 //validation of the commit number
                 try{
                     //confirming that the module has the freeze mechanism enabled
@@ -61,6 +61,9 @@ function freezeConfig(config){
                     let isShallow = child_process.execSync("git rev-parse --is-shallow-repository", basicProcOptions).toString().trim();
                     if(isShallow !== "false"){
                         //convert the shallow clone to a full one in order to be able to search the last commit number for the freeze mechanism
+                        /* NOTE: this will only get the commits from the latest checked out commit (meaning if someone has updated this remotely,
+                            we wont know about it. Was this intended to be used only for local changes?
+                        */
                         child_process.execSync("git fetch --unshallow", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
                     }
                     //this variable will have the reference of the last commit when the octopus-freeze file was modified
