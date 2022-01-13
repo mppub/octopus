@@ -41,12 +41,12 @@ function freezeConfig(config){
             let latestTag, latestCommitHash
             try {
                 latestTag = child_process.execSync("git describe --tags --abbrev=0", basicProcOptions).toString().trim();
-                if(latestTag.length == 40){
+                if(latestTag){
                     action.tag = latestTag;
                 }
                 console.log(`Saving the state of ${targetFolder} at tag ${latestTag}`);
             } catch (err) {
-                octopus.handleError(`Not able to perform the saving state process for target ${targetFolder}. Reason:`, err);
+                console.info(`No tag specified for ${targetFolder}, fallback to a commit hash`);
             }
 
             if (latestTag) {
