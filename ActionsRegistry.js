@@ -284,7 +284,7 @@ function ActionsRegistry() {
                             let remote = src;
                             let tag = action.tag;
 
-                            let cmdFetch = `git fetch origin tag ${tag} --depth=1 --no-tags`; // 'git fetch ' + remote + ' --depth=1 '+ tag;
+                            let cmdFetch = `git fetch origin tags/${tag} --depth=1"`; // 'git fetch ' + remote + ' --depth=1 '+ tag;
                             try {
                                 let fetchResultLog = child_process.execSync(cmdFetch, {cwd: path.resolve(target)} /*basicProcOptions*/).toString();
                                 console.log("Result of fetching of version", changeSet, fetchResultLog);
@@ -533,7 +533,7 @@ function ActionsRegistry() {
                 //3 Fetch repo at certain tag/commit no
                 let cmdFetch
                 if (tag) {
-                    cmdFetch = `cd ${tmpFolder} && git fetch origin tag ${tag} --depth=1 --no-tags`;
+                    cmdFetch = `cd ${tmpFolder} && git fetch origin tags/${tag} --depth=1"`;
                 }
                 else {
                     cmdFetch = `cd ${tmpFolder} && git fetch origin ${commitNo} --depth=1`;
