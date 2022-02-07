@@ -38,44 +38,68 @@ function freezeConfig(config){
 
         if (fs.existsSync(targetFolder) && fs.readdirSync(targetFolder).length > 0 ) {
             // Get tag number
-            let latestTag, latestCommitHash
+            let latestTag, latestCommitHash, latestCommitTag
             try {
+                latestCommitHash = child_process.execSync("git log -n 1 --format=\"%H\"", basicProcOptions).toString().trim();
                 latestTag = child_process.execSync("git describe --tags --abbrev=0", basicProcOptions).toString().trim();
-                if(latestTag){
-                    action.tag = latestTag;
-                }
+                latestCommitTag = child_process.execSync(`git describe --tags --exact-match ${latestCommitHash}`, basicProcOptions).toString().trim();
                 console.log(`Saving the state of ${targetFolder} at tag ${latestTag}`);
             } catch (err) {
                 console.info(`No tag specified for ${targetFolder}, fallback to a commit hash`);
+                latestTag = undefined;
             }
 
             if (latestTag) {
                 //validation of the tag number
                 // just for all the octopus "roots" they can be nested(relative)
-                try{
-                    //confirming that the module has the freeze mechanism enabled
-                    child_process.execSync("git cat-file -e HEAD:octopus-freeze.json", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
-                    //test if the repo is in a shallow clone form-A
-                    let isShallow = child_process.execSync("git rev-parse --is-shallow-repository", basicProcOptions).toString().trim();
-                    if(isShallow !== "false"){
-                        //convert the shallow clone to a full one in order to be able to search the last tag number for the freeze mechanism
-                        child_process.execSync("git fetch --unshallow", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
-                    }
+                const filesList = fs.readdirSync('./', basicProcOptions)
 
-                    // verify that the tag in the latest octopus-freeze.json is the same as the currently used tag, if not replace and print out info message
-                    let freezeCommit = child_process.execSync("git log -n 1 --format=\"%H\" -- octopus-freeze.json", basicProcOptions).toString().trim();
-                    let freezeTagNumber = child_process.execSync(`git describe --tags --exact-match ${freezeCommit}`, basicProcOptions).toString().trim();
-
-                    if(freezeTagNumber !== latestTag){
-                        let initialTag = latestTag;
-                        action.tag = freezeTagNumber;
-                        console.log(`\t * Warning: Tag number was replace for the module ${targetFolder} to ${action.tag} which represents a freezed version.`);
-                        console.log(`\t If the replacement of the tag number isn't desired set manualy the tag number ${initialTag}`)
-                    }else{
-                        console.log(`\t* Module <${targetFolder}> has a freeze mechanism enabled and the tag number checked. All good here!`);
+                if (filesList.indexOf('octopus-freeze.json') === -1) {
+                    if (latestTag !== latestCommitTag) {
+                        console.info(`*** WARNING *** Latest tag is not pointing at the latest commit - running automatic PATCH update`)
+                        try {
+                            latestTag = child_process.execSync(`npm version patch`, basicProcOptions).toString().trim().substr(1)
+                            child_process.execSync(`git push origin master`, basicProcOptions).toString().trim()
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    } else {
+                        const packageJson = JSON.parse(fs.readFileSync('package.json', basicProcOptions).toString().trim())
+                        if (`v${packageJson.version}` !== latestTag) {
+                            console.info(`*** WARNING *** Latest tag is not in the package.json - running automatic PATCH update`)
+                            latestTag = child_process.execSync(`npm version patch`, basicProcOptions).toString().trim().substr(1)
+                            child_process.execSync(`git push origin master`, basicProcOptions).toString().trim()
+                        }
                     }
-                }catch(err){
-                    //we ignore any error caught here because this validation does not affect the freeze mechanism
+                    action.tag = latestTag
+                }
+                else {
+                    try{
+                        action.tag = latestTag;
+                        //confirming that the module has the freeze mechanism enabled
+                        child_process.execSync("git cat-file -e HEAD:octopus-freeze.json", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
+                        //test if the repo is in a shallow clone form-A
+                        let isShallow = child_process.execSync("git rev-parse --is-shallow-repository", basicProcOptions).toString().trim();
+                        if(isShallow !== "false"){
+                            //convert the shallow clone to a full one in order to be able to search the last tag number for the freeze mechanism
+                            child_process.execSync("git fetch --unshallow", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
+                        }
+
+                        // verify that the tag in the latest octopus-freeze.json is the same as the currently used tag, if not replace and print out info message
+                        let freezeCommit = child_process.execSync("git log -n 1 --format=\"%H\" -- octopus-freeze.json", basicProcOptions).toString().trim();
+                        let freezeTagNumber = child_process.execSync(`git describe --tags --exact-match ${freezeCommit}`, basicProcOptions).toString().trim();
+
+                        if(freezeTagNumber !== latestTag){
+                            let initialTag = latestTag;
+                            action.tag = freezeTagNumber;
+                            console.log(`\t * Warning: Tag number was replace for the module ${targetFolder} to ${action.tag} which represents a freezed version.`);
+                            console.log(`\t If the replacement of the tag number isn't desired set manualy the tag number ${initialTag}`)
+                        }else{
+                            console.log(`\t* Module <${targetFolder}> has a freeze mechanism enabled and the tag number checked. All good here!`);
+                        }
+                    }catch(err){
+                        //we ignore any error caught here because this validation does not affect the freeze mechanism
+                    }
                 }
             }
             else {

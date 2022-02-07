@@ -362,7 +362,6 @@ function ActionsRegistry() {
             //throw `Destination path (target) ${target} already exists and is not an empty directory.`;
         }
         else {
-
             let options = {
                 "depth": "1",
                 "branch": "master"
