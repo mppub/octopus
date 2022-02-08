@@ -64,7 +64,7 @@ function freezeConfig(config){
                             console.error(e);
                         }
                     } else {
-                        const packageJson = JSON.parse(fs.readFileSync('package.json', basicProcOptions).toString().trim())
+                        const packageJson = require(`${targetFolder}/package.json`)
                         if (`v${packageJson.version}` !== latestTag) {
                             console.info(`*** WARNING *** Latest tag is not in the package.json - running automatic PATCH update`)
                             latestTag = child_process.execSync(`npm version patch`, basicProcOptions).toString().trim().substr(1)
