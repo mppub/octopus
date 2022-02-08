@@ -4,6 +4,16 @@
  * npm -> package.json -> [scripts]/freeze.js
  * */
 
+const fs = require("fs");
+const os = require("os")
+
+function addNewLineToTheFile(pathToTheFile)
+{
+    const fdId = fs.openSync(pathToTheFile, 'a', 666);
+    fs.writeSync(fdId, os.EOL, null, 'utf8')
+    fs.closeSync(fdId)
+}
+
 const args = process.argv;
 args.splice(0, 2);
 
@@ -76,6 +86,7 @@ function freezeConfig(config){
                 else {
                     try{
                         action.tag = latestTag;
+                        const packageJson = require(`${targetFolder}/package.json`)
                         //confirming that the module has the freeze mechanism enabled
                         child_process.execSync("git cat-file -e HEAD:octopus-freeze.json", {cwd: targetFolder, stdio: ['pipe', 'pipe', 'ignore']});
                         //test if the repo is in a shallow clone form-A
@@ -92,10 +103,31 @@ function freezeConfig(config){
                         if(freezeTagNumber !== latestTag){
                             let initialTag = latestTag;
                             action.tag = freezeTagNumber;
-                            console.log(`\t * Warning: Tag number was replace for the module ${targetFolder} to ${action.tag} which represents a freezed version.`);
+                            console.log(`\t * Warning: Tag number was replaced for the module ${targetFolder} to ${action.tag} which represents a freezed version.`);
                             console.log(`\t If the replacement of the tag number isn't desired set manualy the tag number ${initialTag}`)
-                        }else{
+                        } else {
                             console.log(`\t* Module <${targetFolder}> has a freeze mechanism enabled and the tag number checked. All good here!`);
+                            if (latestTag !== latestCommitTag) {
+                                console.info(`*** WARNING *** Latest tag is not pointing at the latest commit - running automatic PATCH update`)
+                                try {
+                                    latestTag = child_process.execSync(`npm version patch`, basicProcOptions).toString().trim().substr(1)
+                                    addNewLineToTheFile(`${targetFolder}./octopus-freeze.json`);
+                                    child_process.execSync(`git add octopus-freeze.json`, basicProcOptions);
+                                    child_process.execSync(`git commit --amend -m ${latestTag}`, basicProcOptions);
+                                    child_process.execSync(`git push origin master`, basicProcOptions).toString().trim()
+                                } catch (e) {
+                                    console.error(e);
+                                }
+                            } else {
+                                if (`v${packageJson.version}` !== latestTag) {
+                                    console.info(`*** WARNING *** Latest tag is not in the package.json - running automatic PATCH update`)
+                                    latestTag = child_process.execSync(`npm version patch`, basicProcOptions).toString().trim().substr(1)
+                                    addNewLineToTheFile(`${targetFolder}./octopus-freeze.json`);
+                                    child_process.execSync(`git add octopus-freeze.json`, basicProcOptions);
+                                    child_process.execSync(`git commit --amend -m ${latestTag}`, basicProcOptions);
+                                    child_process.execSync(`git push origin master`, basicProcOptions).toString().trim()
+                                }
+                            }
                         }
                     }catch(err){
                         //we ignore any error caught here because this validation does not affect the freeze mechanism
